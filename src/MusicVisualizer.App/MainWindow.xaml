@@ -1,0 +1,35 @@
+<Window x:Class="MusicVisualizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Music Visualizer"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Background="#08080D"
+        UseLayoutRounding="True">
+    <Grid x:Name="Root" Background="Transparent">
+        <!-- Low-res glow layer: the GPU stretches it to full size (cheap soft glow). -->
+        <Image x:Name="GlowSurface" Stretch="Fill" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear" />
+        <!-- Skia renders into this bitmap every frame. -->
+        <Image x:Name="Surface" Stretch="Fill" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear" />
+
+        <!-- Hover toolbar (windowed mode only) -->
+        <Border x:Name="Toolbar" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,14,0,0"
+                Background="#B0101018" CornerRadius="10" Padding="8" Opacity="0">
+            <StackPanel Orientation="Horizontal">
+                <!-- One button per visualizer, generated in code. -->
+                <StackPanel x:Name="VisualizerButtons" Orientation="Horizontal" />
+                <Rectangle Width="1" Fill="#33FFFFFF" Margin="6,2" />
+                <Button Content="Colors" Style="{StaticResource ToolbarButton}" Click="OnPaletteClick" ToolTip="C" />
+                <Button Content="Glow" Style="{StaticResource ToolbarButton}" Click="OnGlowClick" ToolTip="G" />
+                <Rectangle Width="1" Fill="#33FFFFFF" Margin="6,2" />
+                <Button Content="Fullscreen" Style="{StaticResource ToolbarButton}" Click="OnFullscreenClick" ToolTip="F11 / double-click" />
+                <Button Content="Overlay" Style="{StaticResource ToolbarButton}" Click="OnOverlayClick" ToolTip="O — return with Ctrl+Alt+V or the tray icon" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock x:Name="Hint" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,18"
+                   Foreground="#C8C8D8" FontSize="13" IsHitTestVisible="False" Opacity="0" />
+
+        <TextBlock x:Name="StatusText" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="14,10"
+                   Foreground="#FFB86C" FontSize="13" IsHitTestVisible="False" />
+    </Grid>
+</Window>

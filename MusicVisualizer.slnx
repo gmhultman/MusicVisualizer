@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MusicVisualizer.App/MusicVisualizer.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MusicVisualizer.Tests/MusicVisualizer.Tests.csproj" />
+  </Folder>
+</Solution>
