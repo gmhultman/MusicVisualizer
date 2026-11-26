@@ -4,6 +4,8 @@ A real-time music visualizer for Windows. It listens to whatever your PC is play
 
 It runs as a normal window, full screen, or as a **click-through desktop overlay** that sits on top of your work while you keep using the PC underneath.
 
+![Music Visualizer cycling through its visualizers](docs/media/demo.gif)
+
 ## Download
 
 1. Go to the [latest release](https://github.com/gmhultman/MusicVisualizer/releases/latest) and download **MusicVisualizer-win-Setup.exe**.
@@ -15,7 +17,7 @@ The app updates itself: it checks for a new version shortly after starting, down
 ## Features
 
 - **System audio capture**: uses WASAPI loopback on the default playback device and follows it automatically when you switch outputs (for example, when you plug in headphones).
-- **8 visualizers**
+- **9 visualizers**
   - **Bars**: classic spectrum bars with peak caps and a floor reflection
   - **Radial**: spectrum spokes radiating from a bass-pulsing core, slowly rotating
   - **Particles**: bursts on every beat, colored by the frequency band that spawned them
@@ -24,11 +26,41 @@ The app updates itself: it checks for a new version shortly after starting, down
   - **Sphere**: a 3D globe of glowing points that bulges with the music, circled by orbit rings
   - **Fireplace**: a cozy log-cabin Christmas scene with flames, swinging stockings and twinkling lights
   - **Highway**: a car drives over hills generated live from the music, catching air off the crests
+  - **Dance Disaster**: a stick figure dances while the room falls apart around it, with things getting knocked off the walls and shelves as the music gets louder; when it calms down, the dancer sweeps up and the room puts itself back together
 - **8 color palettes**: Neon, Sunset, Aurora, Fire, Ice, Rainbow, Christmas and Candy Cane, plus an optional glow effect.
 - **Desktop overlay**: click-through, either as a strip along the bottom of the screen or full screen.
 - **Tray icon and global hotkeys**: control the app even while it's an overlay.
 - **Screensaver blocking**: keeps the display awake while music is playing and lets Windows sleep normally once it's quiet.
 - **Remembers your settings**: visualizer, palette, mode and window position are saved to `%APPDATA%\MusicVisualizer\settings.json`.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/radial.png" alt="Radial visualizer" width="100%"><br><b>Radial</b>, Rainbow palette</td>
+    <td width="50%"><img src="docs/media/terrain.png" alt="Terrain visualizer" width="100%"><br><b>Terrain</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/dance-disaster.png" alt="Dance Disaster visualizer mid-chaos" width="100%"><br><b>Dance Disaster</b>: the room starts falling apart</td>
+    <td><img src="docs/media/dance-disaster-tidying.png" alt="Dance Disaster dancer sweeping up" width="100%"><br>…and the dancer tidies up when the music calms down</td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/fireplace.png" alt="Fireplace visualizer" width="100%"><br><b>Fireplace</b></td>
+    <td><img src="docs/media/highway-fullscreen.png" alt="Highway visualizer in fullscreen" width="100%"><br><b>Highway</b> in fullscreen, Aurora palette</td>
+  </tr>
+</table>
+
+### Desktop overlay and tray menu
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/overlay-strip.png" alt="Overlay strip along the bottom of the desktop" width="100%"><br>Overlay as a strip along the bottom of the screen</td>
+    <td width="50%"><img src="docs/media/overlay-full.png" alt="Full-screen click-through overlay over open windows" width="100%"><br>Full-screen overlay: click-through, so you keep working underneath</td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/media/tray-menu.png" alt="Tray icon menu" width="100%"><br>The tray menu: switch visualizer, palette or overlay layout from anywhere</td>
+  </tr>
+</table>
 
 ## Controls
 
