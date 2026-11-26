@@ -16,6 +16,7 @@ namespace MusicVisualizer;
 public partial class MainWindow : Window
 {
     private const int GlowDownscale = 4;
+    private const float FadeSeconds = 0.25f; // each way: out, then in
 
     private readonly App _app;
     private readonly DisplayMode _mode;
@@ -33,6 +34,8 @@ public partial class MainWindow : Window
     private bool _switching;
     private bool _fullscreen;
     private string _status = "";
+    private IVisualizer? _shown; // what's on screen; lags CurrentVisualizer while fading out
+    private float _fade = 1;
 
     public MainWindow(App app, DisplayMode mode)
     {
@@ -46,6 +49,7 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
         Closed += OnClosed;
         _app.Notice += ShowHint;
+        _app.SettingsChanged += OnSettingsChanged;
         _idleTimer.Tick += (_, _) => OnIdle();
     }
 
@@ -67,18 +71,7 @@ public partial class MainWindow : Window
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
-        for (int i = 0; i < _app.Visualizers.Count; i++)
-        {
-            int index = i;
-            var button = new System.Windows.Controls.Button
-            {
-                Content = _app.Visualizers[i].Name,
-                Style = (Style)FindResource("ToolbarButton"),
-                ToolTip = (i + 1).ToString(),
-            };
-            button.Click += (_, _) => _app.SetVisualizer(index);
-            VisualizerButtons.Children.Add(button);
-        }
+        RebuildVisualizerButtons();
 
         MouseMove += (_, _) => OnActivity();
         KeyDown += OnKeyDown;
@@ -102,6 +95,7 @@ public partial class MainWindow : Window
         Toolbar.Visibility = Visibility.Collapsed;
 
         var s = _app.Settings;
+        Opacity = s.OverlayOpacity;
         if (s.OverlayLayout == OverlayLayout.FullScreen)
         {
             Left = 0;
@@ -136,13 +130,38 @@ public partial class MainWindow : Window
 
         if (_mode == DisplayMode.Windowed)
         {
-            ShowHint($"1–{_app.Visualizers.Count}  visualizers   ·   C  colors   ·   G  glow   ·   F11  fullscreen   ·   O  overlay", 5);
+            ShowHint($"1–{Math.Min(9, _app.EnabledVisualizerIndexes.Count)}  visualizers   ·   C  colors   ·   G  glow   ·   F11  fullscreen   ·   O  overlay   ·   S  settings", 5);
             OnActivity();
         }
         else
         {
             ShowHint("Overlay on — Ctrl+Alt+V or the tray icon to return", 4);
         }
+    }
+
+    /// <summary>One toolbar button per enabled visualizer, numbered like the 1–9 keys.</summary>
+    private void RebuildVisualizerButtons()
+    {
+        VisualizerButtons.Children.Clear();
+        var enabled = _app.EnabledVisualizerIndexes;
+        for (int n = 0; n < enabled.Count; n++)
+        {
+            int index = enabled[n];
+            var button = new System.Windows.Controls.Button
+            {
+                Content = _app.Visualizers[index].Name,
+                Style = (Style)FindResource("ToolbarButton"),
+                ToolTip = n < 9 ? (n + 1).ToString() : null,
+            };
+            button.Click += (_, _) => _app.SetVisualizer(index);
+            VisualizerButtons.Children.Add(button);
+        }
+    }
+
+    private void OnSettingsChanged()
+    {
+        if (_mode == DisplayMode.Windowed) RebuildVisualizerButtons();
+        else Opacity = _app.Settings.OverlayOpacity;
     }
 
     private static bool IsOnScreen(double left, double top) =>
@@ -169,7 +188,7 @@ public partial class MainWindow : Window
         var frame = _app.Audio.Update(dt);
         UpdateStatus();
 
-        var visualizer = _app.CurrentVisualizer;
+        var visualizer = AdvanceFade(dt);
         double scale = VisualTreeHelper.GetDpi(this).DpiScaleX * visualizer.RenderScale;
         int pw = (int)Math.Round(Root.ActualWidth * scale);
         int ph = (int)Math.Round(Root.ActualHeight * scale);
@@ -223,6 +242,35 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Returns the visualizer to draw this frame. After a switch, keeps drawing the old one while the stage
+    /// fades out, then swaps and fades back in. With fades off (or on the first frame) it swaps at once.
+    /// </summary>
+    private IVisualizer AdvanceFade(float dt)
+    {
+        var target = _app.CurrentVisualizer;
+        if (_shown == null || !_app.Settings.FadeTransitions)
+        {
+            _shown = target;
+            _fade = 1;
+        }
+        else if (_shown != target)
+        {
+            _fade -= dt / FadeSeconds;
+            if (_fade <= 0)
+            {
+                _fade = 0;
+                _shown = target;
+            }
+        }
+        else if (_fade < 1)
+        {
+            _fade = Math.Min(1, _fade + dt / FadeSeconds);
+        }
+        Stage.Opacity = _fade;
+        return _shown;
+    }
+
     private void EnsureGlowBlur(float scale)
     {
         if (_glowBlurPaint != null && _glowBlurScale == scale) return;
@@ -266,16 +314,17 @@ public partial class MainWindow : Window
                    : -1;
         if (number >= 0)
         {
-            if (number < _app.Visualizers.Count) _app.SetVisualizer(number);
+            if (number < _app.EnabledVisualizerIndexes.Count) _app.SetVisualizer(_app.EnabledVisualizerIndexes[number]);
             e.Handled = true;
             return;
         }
 
         switch (e.Key)
         {
-            case Key.Right or Key.Space: _app.SetVisualizer((_app.VisualizerIndex + 1) % _app.Visualizers.Count); break;
-            case Key.Left: _app.SetVisualizer((_app.VisualizerIndex + _app.Visualizers.Count - 1) % _app.Visualizers.Count); break;
-            case Key.C: _app.SetPalette((_app.Settings.PaletteIndex + 1) % Palette.All.Count); break;
+            case Key.Right or Key.Space: _app.NextVisualizer(1); break;
+            case Key.Left: _app.NextVisualizer(-1); break;
+            case Key.C: _app.NextPalette(); break;
+            case Key.S: _app.OpenSettings(); break;
             case Key.G: _app.ToggleGlow(); break;
             case Key.O: _app.SetMode(DisplayMode.Overlay); break;
             case Key.F11 or Key.F: ToggleFullscreen(); break;
@@ -285,7 +334,8 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnPaletteClick(object sender, RoutedEventArgs e) => _app.SetPalette((_app.Settings.PaletteIndex + 1) % Palette.All.Count);
+    private void OnPaletteClick(object sender, RoutedEventArgs e) => _app.NextPalette();
+    private void OnSettingsClick(object sender, RoutedEventArgs e) => _app.OpenSettings();
     private void OnGlowClick(object sender, RoutedEventArgs e) => _app.ToggleGlow();
     private void OnFullscreenClick(object sender, RoutedEventArgs e) => ToggleFullscreen();
     private void OnOverlayClick(object sender, RoutedEventArgs e) => _app.SetMode(DisplayMode.Overlay);
@@ -369,6 +419,7 @@ public partial class MainWindow : Window
     {
         CompositionTarget.Rendering -= OnRendering;
         _app.Notice -= ShowHint;
+        _app.SettingsChanged -= OnSettingsChanged;
         _idleTimer.Stop();
         _surface?.Dispose();
         _surface = null;

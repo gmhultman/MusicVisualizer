@@ -42,20 +42,23 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(new ToolStripSeparator());
 
         var visuals = new ToolStripMenuItem("Visualizer") { ShortcutKeyDisplayString = "Ctrl+Alt+N" };
-        for (int i = 0; i < _app.Visualizers.Count; i++)
+        foreach (int idx in _app.EnabledVisualizerIndexes)
         {
-            int idx = i;
-            visuals.DropDownItems.Add(new ToolStripMenuItem(_app.Visualizers[i].Name, null, (_, _) => _app.SetVisualizer(idx))
+            visuals.DropDownItems.Add(new ToolStripMenuItem(_app.Visualizers[idx].Name, null, (_, _) => _app.SetVisualizer(idx))
                 { Checked = idx == _app.VisualizerIndex });
         }
         menu.Items.Add(visuals);
 
+        menu.Items.Add(new ToolStripMenuItem("Auto-cycle", null, (_, _) => _app.ToggleAutoCycle())
+            { Checked = s.CycleVisualizers != CycleMode.Off });
+
         var palettes = new ToolStripMenuItem("Colors") { ShortcutKeyDisplayString = "Ctrl+Alt+C" };
-        for (int i = 0; i < Palette.All.Count; i++)
+        for (int i = 0; i < _app.Palettes.Count; i++)
         {
             int idx = i;
-            palettes.DropDownItems.Add(new ToolStripMenuItem(Palette.All[i].Name, null, (_, _) => _app.SetPalette(idx))
-                { Checked = idx == s.PaletteIndex });
+            if (idx != _app.PaletteIndex && !_app.EnabledPaletteIndexes.Contains(idx)) continue;
+            palettes.DropDownItems.Add(new ToolStripMenuItem(_app.Palettes[i].Name, null, (_, _) => _app.SetPalette(idx))
+                { Checked = idx == _app.PaletteIndex });
         }
         menu.Items.Add(palettes);
 
@@ -67,6 +70,7 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(layout);
 
         menu.Items.Add(new ToolStripMenuItem("Glow", null, (_, _) => _app.ToggleGlow()) { Checked = s.Glow });
+        menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => _app.OpenSettings()));
         menu.Items.Add(new ToolStripSeparator());
 
         var updater = _app.Updater;

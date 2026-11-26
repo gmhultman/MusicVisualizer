@@ -6,10 +6,13 @@
         Background="#08080D"
         UseLayoutRounding="True">
     <Grid x:Name="Root" Background="Transparent">
-        <!-- Low-res glow layer: the GPU stretches it to full size (cheap soft glow). -->
-        <Image x:Name="GlowSurface" Stretch="Fill" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear" />
-        <!-- Skia renders into this bitmap every frame. -->
-        <Image x:Name="Surface" Stretch="Fill" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear" />
+        <!-- The rendered layers; its opacity fades out and in when the visualizer changes. -->
+        <Grid x:Name="Stage" IsHitTestVisible="False">
+            <!-- Low-res glow layer: the GPU stretches it to full size (cheap soft glow). -->
+            <Image x:Name="GlowSurface" Stretch="Fill" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear" />
+            <!-- Skia renders into this bitmap every frame. -->
+            <Image x:Name="Surface" Stretch="Fill" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear" />
+        </Grid>
 
         <!-- Hover toolbar (windowed mode only) -->
         <Border x:Name="Toolbar" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,14,0,0"
@@ -23,6 +26,8 @@
                 <Rectangle Width="1" Fill="#33FFFFFF" Margin="6,2" />
                 <Button Content="Fullscreen" Style="{StaticResource ToolbarButton}" Click="OnFullscreenClick" ToolTip="F11 / double-click" />
                 <Button Content="Overlay" Style="{StaticResource ToolbarButton}" Click="OnOverlayClick" ToolTip="O — return with Ctrl+Alt+V or the tray icon" />
+                <Rectangle Width="1" Fill="#33FFFFFF" Margin="6,2" />
+                <Button Content="Settings" Style="{StaticResource ToolbarButton}" Click="OnSettingsClick" ToolTip="S" />
             </StackPanel>
         </Border>
 

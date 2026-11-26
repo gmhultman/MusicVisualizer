@@ -27,11 +27,17 @@ The app updates itself: it checks for a new version shortly after starting, down
   - **Fireplace**: a cozy log-cabin Christmas scene with flames, swinging stockings and twinkling lights
   - **Highway**: a car drives over hills generated live from the music, catching air off the crests
   - **Dance Disaster**: a stick figure dances while the room falls apart around it, with things getting knocked off the walls and shelves as the music gets louder; when it calms down, the dancer sweeps up and the room puts itself back together
-- **8 color palettes**: Neon, Sunset, Aurora, Fire, Ice, Rainbow, Christmas and Candy Cane, plus an optional glow effect.
-- **Desktop overlay**: click-through, either as a strip along the bottom of the screen or full screen.
+- **8 color palettes plus your own**: Neon, Sunset, Aurora, Fire, Ice, Rainbow, Christmas and Candy Cane, plus an optional glow effect.
+- **Custom color palettes**: make your own with 2–6 colors.
+- **Auto-cycle**: change the visualizer and/or colors every few minutes or on each new song, optionally shuffled. New songs are detected from apps that report what's playing to Windows (Spotify, browsers, Media Player and so on), falling back to the silence between tracks.
+- **Pick your favorites**: switch off visualizers you don't want and they're hidden from the toolbar, tray menu, number keys and cycling. Palettes can be left out of cycling too.
+- **Smooth fades** between visualizers.
+- **Desktop overlay**: click-through, either as a strip along the bottom of the screen or full screen, with adjustable **overlay opacity**.
 - **Tray icon and global hotkeys**: control the app even while it's an overlay.
 - **Screensaver blocking**: keeps the display awake while music is playing and lets Windows sleep normally once it's quiet.
-- **Remembers your settings**: visualizer, palette, mode and window position are saved to `%APPDATA%\MusicVisualizer\settings.json`.
+- **Remembers your settings**: visualizer, palette, mode, window position, enabled visualizers and palettes, custom palettes, auto-cycle, fade and opacity options are saved to `%APPDATA%\MusicVisualizer\settings.json`.
+
+Most options live in the [Settings window](#settings).
 
 ## Screenshots
 
@@ -76,21 +82,31 @@ The app updates itself: it checks for a new version shortly after starting, down
 
 | Key | Action |
 | --- | --- |
-| `1`–`9` | Pick a visualizer |
+| `1`–`9` | Pick a visualizer (numbered among the enabled ones) |
 | `←` / `→` / `Space` | Previous / next visualizer |
 | `C` | Next color palette |
 | `G` | Toggle glow |
+| `S` | Open settings |
 | `O` | Switch to desktop overlay |
 | `F11` / `F` | Toggle fullscreen |
 | `Esc` | Leave fullscreen |
 
 ### Tray icon
 
-Left-click the tray icon to bring back the window. Right-click it for a menu where you can toggle the overlay, pick a visualizer, palette or overlay layout, turn glow on or off, check for updates, or exit. The menu also shows which version you're running.
+Left-click the tray icon to bring back the window. Right-click it for a menu where you can toggle the overlay, pick a visualizer, palette or overlay layout, turn glow or **Auto-cycle** on or off, open **Settings…**, check for updates, or exit. The menu also shows which version you're running.
+
+## Settings
+
+Open the Settings window with the **Settings** button on the toolbar, the `S` key, or **Settings…** in the tray menu. Changes apply immediately.
+
+- **Visualizers**: choose which visualizers are switched on.
+- **Auto-cycle**: change the visualizer and/or colors on a timer or with each new song, in order or shuffled.
+- **Colors**: create, edit and delete custom palettes, and choose which palettes are included when cycling.
+- **Display**: fade transitions between visualizers, glow, and overlay opacity.
 
 ## Requirements
 
-- Windows 10 or 11
+- Windows 10 (version 1809 or later) or 11
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) to build. The published exe is self-contained and needs no runtime installed.
 
 ## Build and run

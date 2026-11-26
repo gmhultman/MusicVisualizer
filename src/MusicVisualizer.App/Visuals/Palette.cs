@@ -1,20 +1,33 @@
+using System.Globalization;
 using SkiaSharp;
 
 namespace MusicVisualizer.Visuals;
 
 public sealed class Palette
 {
-    private Palette(string name, params uint[] argb)
+    public const int MinColors = 2;
+    public const int MaxColors = 6;
+
+    private Palette(string name, bool isCustom, IEnumerable<SKColor> colors)
     {
         Name = name;
-        Colors = argb.Select(c => new SKColor(c)).ToArray();
+        IsCustom = isCustom;
+        Colors = colors.ToArray();
+        if (Colors.Length < MinColors) throw new ArgumentException($"A palette needs at least {MinColors} colors.", nameof(colors));
         // Colours mirrored back to the start, for seamless sweeps around a circle.
         Wrapped = Colors.Concat(Colors.Reverse().Skip(1)).ToArray();
     }
 
+    private Palette(string name, params uint[] argb) : this(name, false, argb.Select(c => new SKColor(c))) { }
+
     public string Name { get; }
+    public bool IsCustom { get; }
     public SKColor[] Colors { get; }
     public SKColor[] Wrapped { get; }
+
+    /// <summary>Makes a user-defined palette. Colours are forced opaque; throws if there are fewer than two.</summary>
+    public static Palette Create(string name, IEnumerable<SKColor> colors) =>
+        new(name, true, colors.Take(MaxColors).Select(c => c.WithAlpha(255)));
 
     public SKColor Sample(float t)
     {
@@ -26,6 +39,20 @@ public sealed class Palette
             (byte)(a.Red + (b.Red - a.Red) * f),
             (byte)(a.Green + (b.Green - a.Green) * f),
             (byte)(a.Blue + (b.Blue - a.Blue) * f));
+    }
+
+    /// <summary>Formats a colour as <c>#RRGGBB</c>.</summary>
+    public static string ToHex(SKColor c) => $"#{c.Red:X2}{c.Green:X2}{c.Blue:X2}";
+
+    /// <summary>Parses <c>#RRGGBB</c> or <c>RRGGBB</c> (case-insensitive) into an opaque colour.</summary>
+    public static bool TryParseHex(string? text, out SKColor color)
+    {
+        color = default;
+        if (text == null) return false;
+        var s = text.Trim().TrimStart('#');
+        if (s.Length != 6 || !uint.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint rgb)) return false;
+        color = new SKColor(0xFF000000 | rgb);
+        return true;
     }
 
     public static IReadOnlyList<Palette> All { get; } =
