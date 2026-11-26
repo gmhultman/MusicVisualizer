@@ -951,7 +951,7 @@ public sealed class FireplaceVisualizer : IVisualizer
             glow.DrawCircle(x, y, r * (1.6f + 1.4f * b), _glowFill);
         }
         _fill.Shader = null;
-        _fill.Color = Mix(color, SKColors.White, b * 0.5f).WithAlpha((byte)(255 * (0.4f + 0.6f * b)));
+        _fill.Color = ColorUtil.Mix(color, SKColors.White, b * 0.5f).WithAlpha((byte)(255 * (0.4f + 0.6f * b)));
         ctx.Canvas.DrawOval(x, y, r * 0.8f, r, _fill);
         _fill.Color = new SKColor(0x9A, 0x90, 0x78);
         ctx.Canvas.DrawRect(x - r * 0.35f, y - r * 1.25f, r * 0.7f, r * 0.4f, _fill);
@@ -1073,8 +1073,4 @@ public sealed class FireplaceVisualizer : IVisualizer
     private static float Quad(float a, float b, float c, float t) =>
         (1 - t) * (1 - t) * a + 2 * (1 - t) * t * b + t * t * c;
 
-    private static SKColor Mix(SKColor a, SKColor b, float t) => new(
-        (byte)(a.Red + (b.Red - a.Red) * t),
-        (byte)(a.Green + (b.Green - a.Green) * t),
-        (byte)(a.Blue + (b.Blue - a.Blue) * t));
 }

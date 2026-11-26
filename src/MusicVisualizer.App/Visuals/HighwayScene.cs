@@ -199,7 +199,7 @@ internal static class HighwayPainter
                     path.LineTo(w, bottom);
                     path.Close();
                     paint.Color = layer == 0 ? t.FarColor2 : t.FarColor;
-                    if (t.Far == FarKind.SnowMountains) paint.Color = layer == 0 ? Mix(t.FarColor, SKColors.White, 0.2f) : t.FarColor;
+                    if (t.Far == FarKind.SnowMountains) paint.Color = layer == 0 ? ColorUtil.Mix(t.FarColor, SKColors.White, 0.2f) : t.FarColor;
                     c.DrawPath(path, paint);
 
                     if (t.Far == FarKind.SnowMountains)
@@ -405,7 +405,7 @@ internal static class HighwayPainter
                 c.DrawCircle(x, baseY - hgt * 0.72f, s * 0.32f, paint);
                 c.DrawCircle(x - s * 0.22f, baseY - hgt * 0.55f, s * 0.24f, paint);
                 c.DrawCircle(x + s * 0.22f, baseY - hgt * 0.56f, s * 0.25f, paint);
-                paint.Color = Mix(t.NearColor, SKColors.White, 0.15f);
+                paint.Color = ColorUtil.Mix(t.NearColor, SKColors.White, 0.15f);
                 c.DrawCircle(x - s * 0.08f, baseY - hgt * 0.8f, s * 0.14f, paint);
                 break;
             }
@@ -444,9 +444,4 @@ internal static class HighwayPainter
         }
     }
 
-    public static SKColor Mix(SKColor a, SKColor b, float t) => new(
-        (byte)(a.Red + (b.Red - a.Red) * t),
-        (byte)(a.Green + (b.Green - a.Green) * t),
-        (byte)(a.Blue + (b.Blue - a.Blue) * t),
-        (byte)(a.Alpha + (b.Alpha - a.Alpha) * t));
 }

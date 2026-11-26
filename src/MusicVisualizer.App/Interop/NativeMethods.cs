@@ -29,10 +29,6 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool UnregisterHotKey(nint hWnd, int id);
 
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool DestroyIcon(nint hIcon);
-
     public const uint ES_CONTINUOUS = 0x80000000;
     public const uint ES_DISPLAY_REQUIRED = 0x00000002;
 

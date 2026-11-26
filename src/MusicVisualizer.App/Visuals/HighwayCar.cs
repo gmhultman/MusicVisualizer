@@ -118,7 +118,7 @@ internal sealed class HighwayCar
         canvas.Save();
         canvas.Translate(0, sink);
 
-        _fill.Color = Darken(bodyColor, 0.55f);
+        _fill.Color = ColorUtil.Darken(bodyColor, 0.55f);
         canvas.DrawPath(_spoiler, _fill);
         canvas.DrawPath(_body, _bodyPaint);
 
@@ -126,7 +126,7 @@ internal sealed class HighwayCar
         canvas.DrawPath(_lowerShade, _fill);
         _fill.Color = SKColors.White.WithAlpha(60);
         canvas.DrawPath(_shine, _fill);
-        _fill.Color = Darken(bodyColor, 0.85f);
+        _fill.Color = ColorUtil.Darken(bodyColor, 0.85f);
         canvas.DrawPath(_arches, _fill);
 
         // Side skirt between the wheels
@@ -137,17 +137,17 @@ internal sealed class HighwayCar
         canvas.DrawPath(_glass, _glassPaint);
         _fill.Color = SKColors.White.WithAlpha(48);
         canvas.DrawPath(_reflection, _fill);
-        _fill.Color = Darken(bodyColor, 0.62f);
+        _fill.Color = ColorUtil.Darken(bodyColor, 0.62f);
         canvas.DrawRect(-0.012f, -0.366f, 0.018f, 0.092f, _fill);
         _stroke.Color = Trim.WithAlpha(210);
         _stroke.StrokeWidth = 0.006f;
         canvas.DrawPath(_glass, _stroke);
 
         // Door line, handle, mirror
-        _stroke.Color = Darken(bodyColor, 0.6f).WithAlpha(170);
+        _stroke.Color = ColorUtil.Darken(bodyColor, 0.6f).WithAlpha(170);
         _stroke.StrokeWidth = 0.0045f;
         canvas.DrawPath(_doorLine, _stroke);
-        _fill.Color = Darken(bodyColor, 0.5f);
+        _fill.Color = ColorUtil.Darken(bodyColor, 0.5f);
         canvas.DrawRoundRect(0.03f, -0.24f, 0.045f, 0.011f, 0.005f, 0.005f, _fill);
         canvas.DrawRoundRect(0.16f, -0.302f, 0.042f, 0.022f, 0.009f, 0.009f, _fill);
 
@@ -246,7 +246,7 @@ internal sealed class HighwayCar
         if (_bodyShader != null && c == _shaderColor) return;
         _bodyShader?.Dispose();
         _bodyShader = SKShader.CreateLinearGradient(new SKPoint(0, -0.385f), new SKPoint(0, -0.085f),
-            new[] { Mix(c, SKColors.White, 0.42f), Mix(c, SKColors.White, 0.1f), c, Darken(c, 0.45f) },
+            new[] { ColorUtil.Mix(c, SKColors.White, 0.42f), ColorUtil.Mix(c, SKColors.White, 0.1f), c, ColorUtil.Darken(c, 0.45f) },
             new[] { 0f, 0.42f, 0.6f, 1f }, SKShaderTileMode.Clamp);
         _bodyPaint.Shader = _bodyShader;
         _shaderColor = c;
@@ -375,10 +375,5 @@ internal sealed class HighwayCar
         return p;
     }
 
-    private static SKColor Mix(SKColor a, SKColor b, float t) => new(
-        (byte)(a.Red + (b.Red - a.Red) * t),
-        (byte)(a.Green + (b.Green - a.Green) * t),
-        (byte)(a.Blue + (b.Blue - a.Blue) * t));
 
-    private static SKColor Darken(SKColor c, float k) => new((byte)(c.Red * (1 - k)), (byte)(c.Green * (1 - k)), (byte)(c.Blue * (1 - k)));
 }
