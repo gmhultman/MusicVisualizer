@@ -25,7 +25,7 @@ public partial class App : Application
         [
             new BarsVisualizer(), new RadialVisualizer(), new ParticlesVisualizer(),
             new FireVisualizer(), new TerrainVisualizer(), new SphereVisualizer(),
-            new FireplaceVisualizer(), new HighwayVisualizer(),
+            new FireplaceVisualizer(), new HighwayVisualizer(), new DanceDisasterVisualizer(),
         ];
 
     public int VisualizerIndex { get; private set; }
