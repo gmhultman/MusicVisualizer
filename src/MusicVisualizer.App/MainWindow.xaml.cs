@@ -178,6 +178,7 @@ public partial class MainWindow : Window
 
         bool glow = _app.Settings.Glow;
         GlowSurface.Visibility = glow ? Visibility.Visible : Visibility.Collapsed;
+        System.Windows.Controls.Panel.SetZIndex(GlowSurface, visualizer.GlowAbove ? 1 : -1);
 
         var bitmap = _bitmap!;
         var glowBitmap = _glowBitmap!;

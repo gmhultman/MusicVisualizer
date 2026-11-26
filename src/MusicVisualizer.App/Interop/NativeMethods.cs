@@ -32,4 +32,11 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool DestroyIcon(nint hIcon);
+
+    public const uint ES_CONTINUOUS = 0x80000000;
+    public const uint ES_DISPLAY_REQUIRED = 0x00000002;
+
+    /// <summary>Keeps the display on and blocks the screensaver while ES_CONTINUOUS | ES_DISPLAY_REQUIRED is set on this thread.</summary>
+    [LibraryImport("kernel32.dll")]
+    public static partial uint SetThreadExecutionState(uint esFlags);
 }

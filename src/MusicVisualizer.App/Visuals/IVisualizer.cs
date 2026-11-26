@@ -32,6 +32,12 @@ public interface IVisualizer
     /// </summary>
     float RenderScale => 1f;
 
+    /// <summary>
+    /// Show the glow layer above the main canvas instead of below it. Needed by scenes that paint an opaque
+    /// background (which would hide the glow); lights then "bloom" over the scene.
+    /// </summary>
+    bool GlowAbove => false;
+
     /// <summary>Draws one frame. The canvas has already been cleared by the host.</summary>
     void Render(in RenderContext ctx);
 }

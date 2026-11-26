@@ -16,6 +16,7 @@ public partial class App : Application
 {
     private TrayIcon? _tray;
     private GlobalHotkeys? _hotkeys;
+    private ScreensaverBlocker? _screensaver;
     private MainWindow? _window;
 
     public AppSettings Settings { get; private set; } = new();
@@ -24,7 +25,7 @@ public partial class App : Application
         [
             new BarsVisualizer(), new RadialVisualizer(), new ParticlesVisualizer(),
             new FireVisualizer(), new TerrainVisualizer(), new SphereVisualizer(),
-            new FireplaceVisualizer(),
+            new FireplaceVisualizer(), new HighwayVisualizer(),
         ];
 
     public int VisualizerIndex { get; private set; }
@@ -43,6 +44,9 @@ public partial class App : Application
         VisualizerIndex = Math.Max(0, Visualizers.ToList().FindIndex(v => v.Name == Settings.Visualizer));
 
         Audio.Start();
+
+        _screensaver = new ScreensaverBlocker(Audio); // blocks the screensaver only while music plays
+
         _tray = new TrayIcon(this);
 
         _hotkeys = new GlobalHotkeys();
@@ -122,6 +126,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _screensaver?.Dispose();
         _hotkeys?.Dispose();
         _tray?.Dispose();
         Audio.Dispose();
