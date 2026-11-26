@@ -1,0 +1,91 @@
+# Builds the installer and publishes a GitHub release whenever a version tag (v1.2.3) is pushed.
+# Start it with ./release.ps1 rather than tagging by hand.
+#
+# The repo's tag ruleset means only the repo admin can create v* tags. This workflow never
+# creates or moves a tag: it only attaches a release to the tag that was pushed.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  VPK_VERSION: 1.2.161 # keep in step with the Velopack NuGet package in MusicVisualizer.App.csproj
+  REPO_URL: https://github.com/${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write # needed to create the release and upload its files
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Read version from tag
+        id: version
+        run: |
+          $tag = '${{ github.ref_name }}'
+          if ($tag -notmatch '^v(\d+\.\d+\.\d+)$') { throw "Tag '$tag' is not of the form v1.2.3" }
+          "version=$($Matches[1])" >> $env:GITHUB_OUTPUT
+          # The annotated tag's message becomes the release notes.
+          git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+          git tag -l --format='%(contents)' $tag | Out-File -Encoding utf8 release-notes.md
+
+      - name: Test
+        run: dotnet test -c Release
+
+      - name: Publish app
+        run: >
+          dotnet publish src/MusicVisualizer.App/MusicVisualizer.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:AssemblyName=MusicVisualizer
+          -p:DebugType=none
+          -o publish
+
+      - name: Install vpk
+        run: dotnet tool install -g vpk --version $env:VPK_VERSION
+
+      - name: Download previous release (for delta updates)
+        run: |
+          vpk download github --repoUrl $env:REPO_URL --token ${{ secrets.GITHUB_TOKEN }} -o Releases
+          if ($LASTEXITCODE -ne 0) { Write-Host 'No previous release found; this one will be full-size only.' }
+          exit 0
+
+      - name: Pack installer
+        run: >
+          vpk pack
+          --packId MusicVisualizer
+          --packVersion ${{ steps.version.outputs.version }}
+          --packTitle "Music Visualizer"
+          --packAuthors gmhultman
+          --packDir publish
+          --mainExe MusicVisualizer.exe
+          --icon src/MusicVisualizer.App/Assets/app.ico
+          --releaseNotes release-notes.md
+          -o Releases
+
+      - name: Upload release
+        run: >
+          vpk upload github
+          --repoUrl $env:REPO_URL
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --tag ${{ github.ref_name }}
+          --releaseName "Music Visualizer ${{ steps.version.outputs.version }}"
+          --publish
+          -o Releases

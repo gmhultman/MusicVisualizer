@@ -68,8 +68,27 @@ public sealed class TrayIcon : IDisposable
 
         menu.Items.Add(new ToolStripMenuItem("Glow", null, (_, _) => _app.ToggleGlow()) { Checked = s.Glow });
         menu.Items.Add(new ToolStripSeparator());
+
+        var updater = _app.Updater;
+        menu.Items.Add(new ToolStripMenuItem($"Music Visualizer {updater.VersionText}") { Enabled = false });
+        if (updater.PendingVersion is { } pending)
+        {
+            var restart = new ToolStripMenuItem($"Restart to update to {pending}", null, (_, _) => _app.RestartToUpdate());
+            restart.Font = new Font(restart.Font, FontStyle.Bold);
+            menu.Items.Add(restart);
+        }
+        else
+        {
+            menu.Items.Add(new ToolStripMenuItem("Check for updates", null, (_, _) => _app.CheckForUpdatesNow())
+                { Enabled = updater.IsInstalled });
+        }
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => _app.Quit()));
     }
+
+    /// <summary>Shows a notification from the tray icon.</summary>
+    public void ShowMessage(string text) =>
+        _icon.ShowBalloonTip(5000, "Music Visualizer", text, ToolTipIcon.Info);
 
     public void Dispose()
     {

@@ -19,6 +19,7 @@ public partial class App : Application
     private ScreensaverBlocker? _screensaver;
     private MainWindow? _window;
 
+    public Updater Updater { get; } = new();
     public AppSettings Settings { get; private set; } = new();
     public AudioEngine Audio { get; } = new();
     public IReadOnlyList<IVisualizer> Visualizers { get; } =
@@ -55,6 +56,28 @@ public partial class App : Application
         _hotkeys.RegisterCtrlAlt(Key.C, () => SetPalette((Settings.PaletteIndex + 1) % Palette.All.Count));
 
         ShowWindowFor(Settings.Mode);
+
+        Updater.UpdateReady += version => _tray?.ShowMessage($"Version {version} is ready. Restart to update from the tray menu.");
+        _ = CheckForUpdatesLaterAsync();
+    }
+
+    /// <summary>Waits a little after startup so the update check never slows down launching.</summary>
+    private async Task CheckForUpdatesLaterAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        await Updater.CheckAsync(manual: false);
+    }
+
+    public async void CheckForUpdatesNow()
+    {
+        var message = await Updater.CheckAsync(manual: true);
+        if (message != null) _tray?.ShowMessage(message);
+    }
+
+    public void RestartToUpdate()
+    {
+        Settings.Save();
+        Updater.RestartToUpdate(); // exits this process
     }
 
     public void ToggleMode() =>
@@ -121,6 +144,7 @@ public partial class App : Application
     public void Quit()
     {
         Settings.Save();
+        Updater.ApplyPendingOnExit();
         Shutdown();
     }
 

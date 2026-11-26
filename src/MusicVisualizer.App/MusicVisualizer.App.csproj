@@ -12,6 +12,10 @@
     <RootNamespace>MusicVisualizer</RootNamespace>
     <!-- Embedded in the .exe: used by Explorer and pinned taskbar shortcuts. -->
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- Program.Main replaces WPF's generated Main so Velopack runs before anything else. -->
+    <StartupObject>MusicVisualizer.Program</StartupObject>
+    <!-- Local builds show this; release builds pass -p:Version=X.Y.Z from the git tag. -->
+    <Version>0.0.0-dev</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +28,7 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.1" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <ItemGroup>

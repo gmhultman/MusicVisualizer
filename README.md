@@ -4,6 +4,14 @@ A real-time music visualizer for Windows. It listens to whatever your PC is play
 
 It runs as a normal window, full screen, or as a **click-through desktop overlay** that sits on top of your work while you keep using the PC underneath.
 
+## Download
+
+1. Go to the [latest release](https://github.com/gmhultman/MusicVisualizer/releases/latest) and download **MusicVisualizer-win-Setup.exe**.
+2. Run it. The app isn't code-signed, so Windows SmartScreen may warn you: click **More info → Run anyway**.
+3. It installs for your user account only (no admin needed) and adds Desktop and Start menu shortcuts.
+
+The app updates itself: it checks for a new version shortly after starting, downloads it in the background, and offers **Restart to update** in the tray menu. If you don't restart, the update installs the next time you exit. To uninstall, use **Settings → Apps**.
+
 ## Features
 
 - **System audio capture**: uses WASAPI loopback on the default playback device and follows it automatically when you switch outputs (for example, when you plug in headphones).
@@ -46,7 +54,7 @@ It runs as a normal window, full screen, or as a **click-through desktop overlay
 
 ### Tray icon
 
-Left-click the tray icon to bring back the window. Right-click it for a menu where you can toggle the overlay, pick a visualizer, palette or overlay layout, turn glow on or off, or exit.
+Left-click the tray icon to bring back the window. Right-click it for a menu where you can toggle the overlay, pick a visualizer, palette or overlay layout, turn glow on or off, check for updates, or exit. The menu also shows which version you're running.
 
 ## Requirements
 
@@ -60,7 +68,15 @@ dotnet run --project src/MusicVisualizer.App
 dotnet test MusicVisualizer.slnx
 ```
 
-## Install
+## Releasing a new version
+
+```powershell
+./release.ps1 1.0.1 -Notes 'What changed'
+```
+
+The script checks that `main` is committed, pushed and passing its tests, then tags the commit `v1.0.1` and pushes the tag. That starts the [Release workflow](.github/workflows/release.yml), which builds the app, packs the installer and delta update with [Velopack](https://velopack.io), and publishes them as a GitHub release. Installed copies find the update on their next start.
+
+## Local install without the installer
 
 `publish.ps1` builds an optimized, self-contained, single-file `MusicVisualizer.exe` and copies it to an install folder:
 
@@ -69,7 +85,7 @@ dotnet test MusicVisualizer.slnx
 ./publish.ps1 -Destination 'C:\Apps\MusicVisualizer'
 ```
 
-The script asks for admin rights only if the destination folder is protected (such as Program Files). If the installed copy is running, the script closes it first and relaunches it afterwards.
+The script asks for admin rights only if the destination folder is protected (such as Program Files). If the installed copy is running, the script closes it first and relaunches it afterwards. A copy installed this way doesn't update itself.
 
 ## Project layout
 
@@ -77,11 +93,13 @@ The script asks for admin rights only if the destination folder is protected (su
 src/MusicVisualizer.App/
   Audio/      loopback capture and FFT spectrum analysis
   Visuals/    the visualizers, palettes and shared rendering helpers (SkiaSharp)
-  Services/   tray icon, global hotkeys, screensaver blocker
+  Services/   tray icon, global hotkeys, screensaver blocker, updater
   Settings/   persisted user settings
   Interop/    Win32 P/Invoke declarations
 tests/MusicVisualizer.Tests/   xUnit tests
-publish.ps1                    release build and install script
+.github/workflows/release.yml  builds and publishes a release when a version tag is pushed
+release.ps1                    tags and publishes a new version
+publish.ps1                    local build and install script (no auto-update)
 ```
 
 Built with WPF on .NET 8, [NAudio](https://github.com/naudio/NAudio) for audio capture, and [SkiaSharp](https://github.com/mono/SkiaSharp) for rendering.
