@@ -13,6 +13,7 @@ public sealed class HighwayVisualizer : IVisualizer
 {
     private const int StarCount = 110;
     private const int SnowCount = 170;
+    private const byte OverlayGroundAlpha = 90;   // ground tint under the road in overlay mode (0 = none)
 
     private readonly HighwayCar _car = new();
     private readonly Random _rng = new(41);
@@ -78,8 +79,9 @@ public sealed class HighwayVisualizer : IVisualizer
         _time += dt;
 
         // ---- layout
-        float baseY = ctx.Overlay ? (strip ? h * 0.78f : h * 0.82f) : h * 0.72f;
-        float amp = strip ? h * 0.4f : h * 0.2f;                 // height of a "full" hill
+        // Full-screen overlay keeps the road low with smaller hills so it covers less of the desktop.
+        float baseY = ctx.Overlay ? (strip ? h * 0.78f : h * 0.9f) : h * 0.72f;
+        float amp = strip ? h * 0.4f : ctx.Overlay ? h * 0.13f : h * 0.2f;   // height of a "full" hill
         float nearBase = baseY - amp * 0.55f;
         float farBase = nearBase - h * 0.02f;
         float farTop = farBase - h * 0.24f;
@@ -220,13 +222,17 @@ public sealed class HighwayVisualizer : IVisualizer
     {
         var canvas = ctx.Canvas;
 
-        // Ground below the road
+        // Ground below the road. In overlay mode it's only a light tint that fades out a short way below
+        // the road, so the desktop stays visible underneath.
         BuildRoadPath(_path, baseY, amp, roadT - 1f);
         _path.LineTo(w + 10, h + 10);
         _path.LineTo(-10, h + 10);
         _path.Close();
-        using (var ground = SKShader.CreateLinearGradient(new SKPoint(0, baseY - amp), new SKPoint(0, h),
-                   new[] { t.GroundTop, t.GroundBottom }, null, SKShaderTileMode.Clamp))
+        using (var ground = ctx.Overlay
+                   ? SKShader.CreateLinearGradient(new SKPoint(0, baseY - amp), new SKPoint(0, baseY + amp * 0.9f),
+                       new[] { t.GroundTop.WithAlpha(OverlayGroundAlpha), t.GroundTop.WithAlpha(0) }, null, SKShaderTileMode.Clamp)
+                   : SKShader.CreateLinearGradient(new SKPoint(0, baseY - amp), new SKPoint(0, h),
+                       new[] { t.GroundTop, t.GroundBottom }, null, SKShaderTileMode.Clamp))
         {
             _fill.Color = SKColors.White; // shader fills are modulated by the paint's alpha
             _fill.Shader = ground;
@@ -271,14 +277,19 @@ public sealed class HighwayVisualizer : IVisualizer
     {
         var canvas = ctx.Canvas;
         // Horizontal lines follow the road's shape, spreading out toward the viewer.
-        for (int k = 1; k <= 6; k++)
+        // In overlay mode only a few, quickly fading, so the desktop shows through.
+        int lines = ctx.Overlay ? 3 : 6;
+        for (int k = 1; k <= lines; k++)
         {
             float dy = roadT + MathF.Pow(k, 1.55f) * 9f * s;
             BuildRoadPath(_path, baseY, amp, dy);
-            _stroke.Color = ctx.Palette.Sample(k / 6f).WithAlpha((byte)(150 - k * 14));
+            byte alpha = ctx.Overlay ? (byte)(110 - k * 30) : (byte)(150 - k * 14);
+            _stroke.Color = ctx.Palette.Sample(k / 6f).WithAlpha(alpha);
             _stroke.StrokeWidth = 1.2f * s;
             canvas.DrawPath(_path, _stroke);
         }
+        if (ctx.Overlay) return;
+
         // Vertical lines anchored to the world so they scroll with the road.
         float step = 70f * s;
         _stroke.Color = ctx.Palette.Sample(0.5f).WithAlpha(70);
