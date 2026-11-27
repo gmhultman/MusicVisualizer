@@ -22,9 +22,21 @@ public readonly record struct RenderContext(
     public bool Glow => GlowCanvas != null;
 }
 
+/// <summary>Groups visualizers in the toolbar, tray menu and Settings. Declaration order is display order.</summary>
+public enum VisualizerCategory
+{
+    Abstract,
+    Nature,
+    Scenes,
+    Holiday,
+}
+
 public interface IVisualizer
 {
     string Name { get; }
+
+    /// <summary>Which group the visualizer is listed under. <see cref="App.Visualizers"/> is kept sorted by this.</summary>
+    VisualizerCategory Category { get; }
 
     /// <summary>
     /// Fraction of full resolution to render at; the GPU stretches the result to fit. Lower it for

@@ -58,6 +58,7 @@ public sealed class DanceDisasterVisualizer : IVisualizer
     }
 
     public string Name => "Dance Disaster";
+    public VisualizerCategory Category => VisualizerCategory.Scenes;
 
     // The room is opaque, so glows (lamps, LEDs, string lights) bloom over it rather than hiding behind it.
     public bool GlowAbove => true;

@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using MusicVisualizer.Audio;
 using MusicVisualizer.Settings;
 using MusicVisualizer.Visuals;
 using SkiaSharp;
@@ -17,7 +19,9 @@ public partial class SettingsWindow : Window
 {
     private readonly App _app;
     private readonly List<CheckBox> _visualizerBoxes = [];
+    private readonly List<(VisualizerCategory Category, Expander Expander, List<CheckBox> Boxes)> _visualizerGroups = [];
     private bool _loading;
+    private float _meter;
 
     public SettingsWindow(App app)
     {
@@ -26,7 +30,13 @@ public partial class SettingsWindow : Window
         Height = Math.Min(Height, SystemParameters.WorkArea.Height - 40);
 
         BuildVisualizerList();
+        BuildMicList();
         Refresh();
+
+        var meterTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        meterTimer.Tick += (_, _) => UpdateLevelMeter();
+        meterTimer.Start();
+        Closed += (_, _) => meterTimer.Stop();
 
         _app.SettingsChanged += OnAppSettingsChanged;
         _app.Notice += OnAppNotice;
@@ -62,9 +72,16 @@ public partial class SettingsWindow : Window
         _loading = true;
         try
         {
+            SourceBox.SelectedIndex = (int)S.AudioSource;
+            SelectMicrophone();
+            GainSlider.Value = S.MicrophoneGain;
+            GainText.Text = $"{S.MicrophoneGain:0.#}×";
+            UpdateMicEnabled();
+
             var offV = new HashSet<string>(S.DisabledVisualizers, StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < _visualizerBoxes.Count; i++)
-                _visualizerBoxes[i].IsChecked = !offV.Contains(_app.Visualizers[i].Name);
+            foreach (var box in _visualizerBoxes)
+                box.IsChecked = !offV.Contains((string)box.Tag);
+            UpdateGroupHeaders();
 
             CycleVisualizersBox.SelectedIndex = (int)S.CycleVisualizers;
             CycleColorsBox.SelectedIndex = (int)S.CycleColors;
@@ -82,18 +99,112 @@ public partial class SettingsWindow : Window
         finally { _loading = false; }
     }
 
+    // ---------------------------------------------------------------- sound
+
+    /// <summary>Fills the microphone list: "Default" first (Tag null), then each active recording device (Tag = id).</summary>
+    private void BuildMicList()
+    {
+        bool was = _loading;
+        _loading = true;
+        try
+        {
+            MicBox.Items.Clear();
+            MicBox.Items.Add(new ComboBoxItem { Content = "Windows default microphone", Tag = null });
+            foreach (var mic in _app.Audio.ListMicrophones())
+                MicBox.Items.Add(new ComboBoxItem { Content = mic.Name, Tag = mic.Id });
+            if (S.MicrophoneId != null && !MicBox.Items.Cast<ComboBoxItem>().Any(i => (string?)i.Tag == S.MicrophoneId))
+                MicBox.Items.Add(new ComboBoxItem { Content = "(Chosen microphone — not connected)", Tag = S.MicrophoneId });
+            SelectMicrophone();
+        }
+        finally { _loading = was; }
+    }
+
+    private void SelectMicrophone() =>
+        MicBox.SelectedItem = MicBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string?)i.Tag == S.MicrophoneId)
+                              ?? (MicBox.Items.Count > 0 ? MicBox.Items[0] : null);
+
+    private void UpdateMicEnabled()
+    {
+        bool mic = S.AudioSource == AudioSource.Microphone;
+        MicBox.IsEnabled = GainSlider.IsEnabled = mic;
+        MicLabel.Opacity = GainLabel.Opacity = GainText.Opacity = mic ? 1 : 0.45;
+    }
+
+    private void OnSourceChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || SourceBox.SelectedIndex < 0) return;
+        S.AudioSource = (AudioSource)SourceBox.SelectedIndex;
+        Apply();
+    }
+
+    private void OnMicDropDownOpened(object? sender, EventArgs e) => BuildMicList(); // pick up newly plugged-in mics
+
+    private void OnMicChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || MicBox.SelectedItem is not ComboBoxItem item) return;
+        S.MicrophoneId = (string?)item.Tag;
+        Apply();
+    }
+
+    private void OnGainChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (GainText == null) return; // during InitializeComponent
+        GainText.Text = $"{GainSlider.Value:0.#}×";
+        if (_loading || Math.Abs(GainSlider.Value - S.MicrophoneGain) < 0.001) return;
+        S.MicrophoneGain = GainSlider.Value;
+        Apply();
+    }
+
+    /// <summary>Live input meter, so the user can see whether the mic hears anything and set the sensitivity.</summary>
+    private void UpdateLevelMeter()
+    {
+        float level = _app.Audio.Frame.Level;
+        _meter += (level - _meter) * (level > _meter ? 0.6f : 0.15f);
+        LevelBar.Width = Math.Max(0, LevelTrack.ActualWidth * Math.Clamp(_meter, 0f, 1f));
+    }
+
     // ---------------------------------------------------------------- visualizers
 
+    /// <summary>One expander per category (empty categories are skipped), each holding a 2-column grid of checkboxes.</summary>
     private void BuildVisualizerList()
     {
-        VisualizerList.Children.Clear();
+        VisualizerGroups.Children.Clear();
         _visualizerBoxes.Clear();
-        foreach (var v in _app.Visualizers)
+        _visualizerGroups.Clear();
+        var all = Enumerable.Range(0, _app.Visualizers.Count);
+        foreach (var group in VisualizerCatalog.GroupByCategory(_app.Visualizers, all))
         {
-            var box = new CheckBox { Content = v.Name, Tag = v.Name };
-            box.Click += OnVisualizerClick;
-            _visualizerBoxes.Add(box);
-            VisualizerList.Children.Add(box);
+            var grid = new UniformGrid { Columns = 2 };
+            var boxes = new List<CheckBox>();
+            foreach (int i in group)
+            {
+                var name = _app.Visualizers[i].Name;
+                var box = new CheckBox { Content = name, Tag = name };
+                box.Click += OnVisualizerClick;
+                _visualizerBoxes.Add(box);
+                boxes.Add(box);
+                grid.Children.Add(box);
+            }
+            var expander = new Expander { IsExpanded = true, Content = grid };
+            _visualizerGroups.Add((group.Key, expander, boxes));
+            VisualizerGroups.Children.Add(expander);
+        }
+    }
+
+    /// <summary>Header text like "Scenes   2 of 3 on".</summary>
+    private void UpdateGroupHeaders()
+    {
+        foreach (var (category, expander, boxes) in _visualizerGroups)
+        {
+            int on = boxes.Count(b => b.IsChecked == true);
+            expander.Header = new TextBlock
+            {
+                Inlines =
+                {
+                    new System.Windows.Documents.Run(category.ToString()) { FontWeight = FontWeights.SemiBold },
+                    new System.Windows.Documents.Run($"   {on} of {boxes.Count} on") { Foreground = (Brush)FindResource("Dlg.SubText"), FontSize = 12 },
+                },
+            };
         }
     }
 

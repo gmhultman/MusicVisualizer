@@ -30,12 +30,11 @@ public partial class App : Application
     public AudioEngine Audio { get; } = new();
 
     /// <summary>Every visualizer, enabled or not. Indexes into this list identify a visualizer.</summary>
-    public IReadOnlyList<IVisualizer> Visualizers { get; } =
-        [
-            new BarsVisualizer(), new RadialVisualizer(), new ParticlesVisualizer(),
-            new FireVisualizer(), new TerrainVisualizer(), new SphereVisualizer(),
-            new FireplaceVisualizer(), new HighwayVisualizer(), new DanceDisasterVisualizer(),
-        ];
+    public IReadOnlyList<IVisualizer> Visualizers { get; } = VisualizerCatalog.CreateAll();
+
+    /// <summary>The enabled visualizers' indexes grouped by category, in display order. Empty categories are left out.</summary>
+    public IEnumerable<IGrouping<VisualizerCategory, int>> EnabledVisualizersByCategory =>
+        VisualizerCatalog.GroupByCategory(Visualizers, EnabledVisualizerIndexes);
 
     /// <summary>Built-in palettes followed by the user's custom ones. Rebuilt by <see cref="ApplySettings"/>.</summary>
     public IReadOnlyList<Palette> Palettes { get; private set; } = Palette.All;
@@ -67,6 +66,7 @@ public partial class App : Application
         if (!EnabledVisualizerIndexes.Contains(VisualizerIndex)) VisualizerIndex = EnabledVisualizerIndexes[0];
         Settings.Visualizer = CurrentVisualizer.Name;
 
+        ConfigureAudio();
         Audio.Start();
 
         _screensaver = new ScreensaverBlocker(Audio); // blocks the screensaver only while music plays
@@ -245,9 +245,22 @@ public partial class App : Application
             Settings.Visualizer = CurrentVisualizer.Name;
         }
 
+        ConfigureAudio();
         _cycler?.Restart();
         Settings.Save();
         SettingsChanged?.Invoke();
+    }
+
+    /// <summary>Points the audio capture at the source and microphone chosen in settings.</summary>
+    private void ConfigureAudio() =>
+        Audio.Configure(Settings.AudioSource, Settings.MicrophoneId, (float)Settings.MicrophoneGain);
+
+    /// <summary>Tray quick toggle between what the PC plays and the microphone.</summary>
+    public void ToggleMicrophone()
+    {
+        Settings.AudioSource = Settings.AudioSource == AudioSource.Microphone ? AudioSource.Speakers : AudioSource.Microphone;
+        ApplySettings();
+        RaiseNotice(Settings.AudioSource == AudioSource.Microphone ? "Listening to the microphone" : "Listening to PC audio");
     }
 
     /// <summary>Rebuilds <see cref="Palettes"/> and the enabled lists from settings, and re-finds the current palette.</summary>

@@ -26,6 +26,7 @@ public sealed class ParticlesVisualizer : IVisualizer
     private readonly SKPaint _core = new() { IsAntialias = true, Style = SKPaintStyle.Fill, BlendMode = SKBlendMode.Plus };
 
     public string Name => "Particles";
+    public VisualizerCategory Category => VisualizerCategory.Abstract;
 
     public void Render(in RenderContext ctx)
     {

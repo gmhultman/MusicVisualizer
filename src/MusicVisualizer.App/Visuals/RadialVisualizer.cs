@@ -14,6 +14,7 @@ public sealed class RadialVisualizer : IVisualizer
     private float _rotation;
 
     public string Name => "Radial";
+    public VisualizerCategory Category => VisualizerCategory.Abstract;
 
     public void Render(in RenderContext ctx)
     {

@@ -41,16 +41,29 @@ public sealed class TrayIcon : IDisposable
             (_, _) => _app.ToggleMode()) { ShortcutKeyDisplayString = "Ctrl+Alt+V" });
         menu.Items.Add(new ToolStripSeparator());
 
+        // One submenu per category; with only one category in use, its visualizers go straight in.
         var visuals = new ToolStripMenuItem("Visualizer") { ShortcutKeyDisplayString = "Ctrl+Alt+N" };
-        foreach (int idx in _app.EnabledVisualizerIndexes)
+        var groups = _app.EnabledVisualizersByCategory.ToList();
+        foreach (var group in groups)
         {
-            visuals.DropDownItems.Add(new ToolStripMenuItem(_app.Visualizers[idx].Name, null, (_, _) => _app.SetVisualizer(idx))
-                { Checked = idx == _app.VisualizerIndex });
+            var target = visuals;
+            if (groups.Count > 1)
+            {
+                target = new ToolStripMenuItem(group.Key.ToString()) { Checked = group.Key == _app.CurrentVisualizer.Category };
+                visuals.DropDownItems.Add(target);
+            }
+            foreach (int idx in group)
+            {
+                target.DropDownItems.Add(new ToolStripMenuItem(_app.Visualizers[idx].Name, null, (_, _) => _app.SetVisualizer(idx))
+                    { Checked = idx == _app.VisualizerIndex });
+            }
         }
         menu.Items.Add(visuals);
 
         menu.Items.Add(new ToolStripMenuItem("Auto-cycle", null, (_, _) => _app.ToggleAutoCycle())
             { Checked = s.CycleVisualizers != CycleMode.Off });
+        menu.Items.Add(new ToolStripMenuItem("Listen to microphone", null, (_, _) => _app.ToggleMicrophone())
+            { Checked = s.AudioSource == Audio.AudioSource.Microphone });
 
         var palettes = new ToolStripMenuItem("Colors") { ShortcutKeyDisplayString = "Ctrl+Alt+C" };
         for (int i = 0; i < _app.Palettes.Count; i++)

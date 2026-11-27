@@ -87,6 +87,35 @@ public class SettingsTests
         Assert.Equal(expected, s.OverlayOpacity);
     }
 
+    [Theory]
+    [InlineData(0.0, AppSettings.MinMicrophoneGain)]
+    [InlineData(500.0, AppSettings.MaxMicrophoneGain)]
+    [InlineData(6.5, 6.5)]
+    public void Microphone_gain_is_clamped(double stored, double expected)
+    {
+        var s = AppSettings.FromJson($$"""{"MicrophoneGain":{{stored.ToString(CultureInfo.InvariantCulture)}}}""");
+        Assert.Equal(expected, s.MicrophoneGain);
+    }
+
+    [Fact]
+    public void Old_settings_default_to_pc_audio_and_the_default_microphone()
+    {
+        var s = AppSettings.FromJson("""{"Visualizer":"Bars","MicrophoneId":"  "}""");
+        Assert.Equal(MusicVisualizer.Audio.AudioSource.Speakers, s.AudioSource);
+        Assert.Null(s.MicrophoneId);
+        Assert.Equal(AppSettings.DefaultMicrophoneGain, s.MicrophoneGain);
+    }
+
+    [Fact]
+    public void Microphone_choice_round_trips()
+    {
+        var s = new AppSettings { AudioSource = MusicVisualizer.Audio.AudioSource.Microphone, MicrophoneId = "{0.0.1.00000000}.{abc}" };
+        var back = AppSettings.FromJson(s.ToJson());
+        Assert.Equal(MusicVisualizer.Audio.AudioSource.Microphone, back.AudioSource);
+        Assert.Equal("{0.0.1.00000000}.{abc}", back.MicrophoneId);
+        Assert.Contains("\"Microphone\"", s.ToJson()); // stored by name, like the other enums
+    }
+
     [Fact]
     public void Enums_round_trip_as_strings()
     {

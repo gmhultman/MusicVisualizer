@@ -67,6 +67,7 @@ public sealed class HighwayVisualizer : IVisualizer
     }
 
     public string Name => "Highway";
+    public VisualizerCategory Category => VisualizerCategory.Scenes;
 
     // The sky is opaque, so lights (sun, lamps, road edge, aurora, car lights) bloom over the scene instead.
     public bool GlowAbove => true;

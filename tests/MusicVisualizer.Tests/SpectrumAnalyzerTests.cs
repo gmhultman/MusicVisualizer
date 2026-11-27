@@ -23,6 +23,24 @@ public class SpectrumAnalyzerTests
         return best;
     }
 
+    [Fact]
+    public void Low_sample_rate_devices_still_light_the_top_band()
+    {
+        // A 16 kHz headset mic can't capture above 8 kHz; the bands squeeze down so the top one still gets signal.
+        const int rate = 16000;
+        var analyzer = new SpectrumAnalyzer();
+        var s = new float[analyzer.FftSize];
+        for (int f = 0; f < 20; f++)
+        {
+            for (int i = 0; i < s.Length; i++)
+                s[i] = 0.8f * MathF.Sin(2 * MathF.PI * 7000f * (i + f * 800) / rate);
+            analyzer.Process(s, rate, Dt);
+        }
+
+        Assert.Equal(analyzer.BandCount - 1, analyzer.BandIndexForFrequency(7000f));
+        Assert.True(analyzer.Frame.Bands[^1] > 0.5f);
+    }
+
     [Theory]
     [InlineData(100f)]
     [InlineData(1000f)]

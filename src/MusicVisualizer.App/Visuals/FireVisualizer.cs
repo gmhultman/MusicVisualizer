@@ -25,6 +25,7 @@ public sealed class FireVisualizer : IVisualizer
     private readonly SKPaint _coals = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
 
     public string Name => "Fire";
+    public VisualizerCategory Category => VisualizerCategory.Nature;
 
     // Big overlapping gradient shapes are expensive to fill on the CPU; smooth flames lose nothing at 60%.
     public float RenderScale => 0.6f;

@@ -29,11 +29,52 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="20,0,20,20">
 
+                <!-- 0. Sound source -->
+                <TextBlock Text="Sound" Style="{StaticResource SectionHeader}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="50" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Listen to" VerticalAlignment="Center" />
+                    <ComboBox x:Name="SourceBox" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3" SelectionChanged="OnSourceChanged">
+                        <ComboBoxItem Content="What's playing on this PC" />
+                        <ComboBoxItem Content="Microphone" />
+                    </ComboBox>
+
+                    <TextBlock x:Name="MicLabel" Grid.Row="1" Text="Microphone" VerticalAlignment="Center" />
+                    <ComboBox x:Name="MicBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3"
+                              SelectionChanged="OnMicChanged" DropDownOpened="OnMicDropDownOpened" />
+
+                    <TextBlock x:Name="GainLabel" Grid.Row="2" Text="Mic sensitivity" VerticalAlignment="Center" />
+                    <Slider x:Name="GainSlider" Grid.Row="2" Grid.Column="1" Minimum="1" Maximum="20" SmallChange="1" LargeChange="2"
+                            IsSnapToTickEnabled="True" TickFrequency="0.5" VerticalAlignment="Center" Margin="0,6"
+                            ValueChanged="OnGainChanged" />
+                    <TextBlock x:Name="GainText" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Row="3" Text="Level" VerticalAlignment="Center" />
+                    <Border x:Name="LevelTrack" Grid.Row="3" Grid.Column="1" Height="8" Margin="0,6" CornerRadius="4"
+                            Background="{StaticResource Dlg.Field}" VerticalAlignment="Center">
+                        <Border x:Name="LevelBar" HorizontalAlignment="Left" Width="0" CornerRadius="4" Background="{StaticResource Dlg.Accent}" />
+                    </Border>
+                </Grid>
+                <TextBlock Style="{StaticResource Caption}"
+                           Text="Use the microphone for live music, instruments or singing in the room. If the level barely moves, raise the sensitivity." />
+
                 <!-- 1. Visualizers -->
                 <TextBlock Text="Visualizers" Style="{StaticResource SectionHeader}" />
-                <UniformGrid x:Name="VisualizerList" Columns="2" />
+                <!-- One expandable group per category, generated in code. -->
+                <StackPanel x:Name="VisualizerGroups" />
                 <TextBlock Style="{StaticResource Caption}"
-                           Text="Unticked visualizers are hidden from the toolbar, tray menu, number keys and cycling." />
+                           Text="Unticked visualizers are hidden from the toolbar, tray menu, arrow keys and cycling." />
 
                 <!-- 2. Auto-cycle -->
                 <TextBlock Text="Auto-cycle" Style="{StaticResource SectionHeader}" />

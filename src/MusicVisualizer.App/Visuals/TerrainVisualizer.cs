@@ -32,6 +32,7 @@ public sealed class TerrainVisualizer : IVisualizer
     private readonly SKPaint _shape = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
 
     public string Name => "Terrain";
+    public VisualizerCategory Category => VisualizerCategory.Nature;
 
     public void Render(in RenderContext ctx)
     {

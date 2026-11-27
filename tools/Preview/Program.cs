@@ -85,11 +85,10 @@ void Render(IVisualizer vis, int outW, int outH, bool overlay, string file)
     Console.WriteLine($"wrote {file}  avg {sw.Elapsed.TotalMilliseconds / frames:F2} ms/frame");
 }
 
-Func<IVisualizer>[] all =
-[
-    () => new BarsVisualizer(), () => new RadialVisualizer(), () => new ParticlesVisualizer(), () => new FireVisualizer(),
-    () => new TerrainVisualizer(), () => new SphereVisualizer(), () => new FireplaceVisualizer(), () => new HighwayVisualizer(), () => new DanceDisasterVisualizer(),
-];
+// Fresh instances per render, straight from the app's catalog so new visualizers show up here automatically.
+var all = Enumerable.Range(0, VisualizerCatalog.CreateAll().Count)
+    .Select(i => (Func<IVisualizer>)(() => VisualizerCatalog.CreateAll()[i]))
+    .ToArray();
 foreach (var make in all)
 {
     var probe = make();
