@@ -40,6 +40,7 @@ public sealed class SphereVisualizer : IVisualizer
     }
 
     public string Name => "Sphere";
+    public VisualizerCategory Category => VisualizerCategory.Abstract;
 
     public void Render(in RenderContext ctx)
     {

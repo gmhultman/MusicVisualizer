@@ -27,6 +27,9 @@ public sealed class SpectrumAnalyzer
     private readonly float[] _peakVelocity;
     private readonly float[] _peakHold;
 
+    private readonly float _minHz, _maxHz;
+    private int _bandRate; // sample rate the band edges were laid out for
+
     private float _ceilingDb = MinCeilingDb;
     private float _bassAverage;
     private float _sinceBeat = 10f;
@@ -46,18 +49,31 @@ public sealed class SpectrumAnalyzer
         _bandLoHz = new float[bandCount];
         _bandHiHz = new float[bandCount];
         _bandCenterHz = new float[bandCount];
-        double ratio = maxHz / minHz;
-        for (int b = 0; b < bandCount; b++)
-        {
-            _bandLoHz[b] = (float)(minHz * Math.Pow(ratio, (double)b / bandCount));
-            _bandHiHz[b] = (float)(minHz * Math.Pow(ratio, (double)(b + 1) / bandCount));
-            _bandCenterHz[b] = MathF.Sqrt(_bandLoHz[b] * _bandHiHz[b]);
-        }
+        _minHz = minHz;
+        _maxHz = maxHz;
+        LayOutBands(48000);
 
         RawBands = new float[bandCount];
         _peakVelocity = new float[bandCount];
         _peakHold = new float[bandCount];
         Frame = new AudioFrame(bandCount);
+    }
+
+    /// <summary>
+    /// Spreads the log-spaced bands from minHz up to maxHz, or to just below the Nyquist frequency when the device
+    /// records at a low rate (e.g. a 16 kHz headset mic), so every band carries signal.
+    /// </summary>
+    private void LayOutBands(int sampleRate)
+    {
+        _bandRate = sampleRate;
+        float top = MathF.Min(_maxHz, sampleRate * 0.45f);
+        double ratio = top / _minHz;
+        for (int b = 0; b < BandCount; b++)
+        {
+            _bandLoHz[b] = (float)(_minHz * Math.Pow(ratio, (double)b / BandCount));
+            _bandHiHz[b] = (float)(_minHz * Math.Pow(ratio, (double)(b + 1) / BandCount));
+            _bandCenterHz[b] = MathF.Sqrt(_bandLoHz[b] * _bandHiHz[b]);
+        }
     }
 
     public int FftSize { get; }
@@ -82,6 +98,7 @@ public sealed class SpectrumAnalyzer
     public AudioFrame Process(ReadOnlySpan<float> samples, int sampleRate, float dt)
     {
         int n = FftSize;
+        if (sampleRate > 0 && sampleRate != _bandRate) LayOutBands(sampleRate);
         if (samples.Length > n) samples = samples[^n..];
         int pad = n - samples.Length;
 

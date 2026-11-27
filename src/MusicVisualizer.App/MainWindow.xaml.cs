@@ -36,6 +36,8 @@ public partial class MainWindow : Window
     private string _status = "";
     private IVisualizer? _shown; // what's on screen; lags CurrentVisualizer while fading out
     private float _fade = 1;
+    private readonly Dictionary<VisualizerCategory, System.Windows.Controls.Button> _categoryButtons = [];
+    private bool _menuOpen; // a toolbar dropdown is showing, so don't auto-hide the toolbar
 
     public MainWindow(App app, DisplayMode mode)
     {
@@ -48,7 +50,7 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closed += OnClosed;
-        _app.Notice += ShowHint;
+        _app.Notice += OnNotice;
         _app.SettingsChanged += OnSettingsChanged;
         _idleTimer.Tick += (_, _) => OnIdle();
     }
@@ -130,7 +132,7 @@ public partial class MainWindow : Window
 
         if (_mode == DisplayMode.Windowed)
         {
-            ShowHint($"1–{Math.Min(9, _app.EnabledVisualizerIndexes.Count)}  visualizers   ·   C  colors   ·   G  glow   ·   F11  fullscreen   ·   O  overlay   ·   S  settings", 5);
+            ShowHint($"←/→  visualizers   ·   C  colors   ·   G  glow   ·   F11  fullscreen   ·   O  overlay   ·   S  settings", 5);
             OnActivity();
         }
         else
@@ -139,23 +141,65 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>One toolbar button per enabled visualizer, numbered like the 1–9 keys.</summary>
+    /// <summary>
+    /// One toolbar button per category that has enabled visualizers. Each opens a menu of that category's
+    /// visualizers; the button for the category that's showing is highlighted.
+    /// </summary>
     private void RebuildVisualizerButtons()
     {
         VisualizerButtons.Children.Clear();
-        var enabled = _app.EnabledVisualizerIndexes;
-        for (int n = 0; n < enabled.Count; n++)
+        _categoryButtons.Clear();
+        foreach (var group in _app.EnabledVisualizersByCategory)
         {
-            int index = enabled[n];
-            var button = new System.Windows.Controls.Button
-            {
-                Content = _app.Visualizers[index].Name,
-                Style = (Style)FindResource("ToolbarButton"),
-                ToolTip = n < 9 ? (n + 1).ToString() : null,
-            };
-            button.Click += (_, _) => _app.SetVisualizer(index);
+            var button = new System.Windows.Controls.Button { Content = $"{group.Key}  ▾" };
+            var indexes = group.ToList();
+            button.Click += (_, _) => OpenCategoryMenu(button, indexes);
+            _categoryButtons[group.Key] = button;
             VisualizerButtons.Children.Add(button);
         }
+        UpdateActiveCategory();
+    }
+
+    private void UpdateActiveCategory()
+    {
+        var current = _app.CurrentVisualizer;
+        foreach (var (category, button) in _categoryButtons)
+        {
+            bool active = category == current.Category;
+            button.Style = (Style)FindResource(active ? "ToolbarButtonActive" : "ToolbarButton");
+            button.ToolTip = active ? current.Name : null;
+        }
+    }
+
+    private void OpenCategoryMenu(System.Windows.Controls.Button button, List<int> indexes) =>
+        OpenToolbarMenu(button, indexes.Select(i => (_app.Visualizers[i].Name, i == _app.VisualizerIndex, (Action)(() => _app.SetVisualizer(i)))));
+
+    /// <summary>Opens a dark dropdown under a toolbar button; the toolbar stays up while it's open.</summary>
+    private void OpenToolbarMenu(System.Windows.Controls.Button button, IEnumerable<(string Name, bool Checked, Action Pick)> items)
+    {
+        var menu = new System.Windows.Controls.ContextMenu
+        {
+            Style = (Style)FindResource("ToolbarMenu"),
+            PlacementTarget = button,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+        var itemStyle = (Style)FindResource("ToolbarMenuItem");
+        foreach (var (name, isChecked, pick) in items)
+        {
+            var item = new System.Windows.Controls.MenuItem { Header = name, IsChecked = isChecked, Style = itemStyle };
+            item.Click += (_, _) => pick();
+            menu.Items.Add(item);
+        }
+
+        menu.Opened += (_, _) => _menuOpen = true;
+        menu.Closed += (_, _) => { _menuOpen = false; OnActivity(); };
+        menu.IsOpen = true;
+    }
+
+    private void OnNotice(string text)
+    {
+        ShowHint(text);
+        if (_mode == DisplayMode.Windowed) UpdateActiveCategory(); // the visualizer may have changed
     }
 
     private void OnSettingsChanged()
@@ -309,16 +353,6 @@ public partial class MainWindow : Window
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
-        int number = e.Key is >= Key.D1 and <= Key.D9 ? e.Key - Key.D1
-                   : e.Key is >= Key.NumPad1 and <= Key.NumPad9 ? e.Key - Key.NumPad1
-                   : -1;
-        if (number >= 0)
-        {
-            if (number < _app.EnabledVisualizerIndexes.Count) _app.SetVisualizer(_app.EnabledVisualizerIndexes[number]);
-            e.Handled = true;
-            return;
-        }
-
         switch (e.Key)
         {
             case Key.Right or Key.Space: _app.NextVisualizer(1); break;
@@ -374,7 +408,7 @@ public partial class MainWindow : Window
     private void OnIdle()
     {
         _idleTimer.Stop();
-        if (Toolbar.IsMouseOver) { _idleTimer.Start(); return; }
+        if (Toolbar.IsMouseOver || _menuOpen) { _idleTimer.Start(); return; }
         Fade(Toolbar, 0, 0.5);
         if (_fullscreen) Cursor = Cursors.None;
     }
@@ -418,7 +452,7 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         CompositionTarget.Rendering -= OnRendering;
-        _app.Notice -= ShowHint;
+        _app.Notice -= OnNotice;
         _app.SettingsChanged -= OnSettingsChanged;
         _idleTimer.Stop();
         _surface?.Dispose();

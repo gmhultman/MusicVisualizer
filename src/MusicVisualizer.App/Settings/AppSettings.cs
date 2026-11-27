@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MusicVisualizer.Audio;
 using MusicVisualizer.Visuals;
 using SkiaSharp;
 
@@ -30,6 +31,9 @@ public sealed class AppSettings
     public const double MinCycleMinutes = 0.25;
     public const double MaxCycleMinutes = 60;
     public const double MinOverlayOpacity = 0.2;
+    public const double MinMicrophoneGain = 1;
+    public const double MaxMicrophoneGain = 20;
+    public const double DefaultMicrophoneGain = 4;
 
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MusicVisualizer", "settings.json");
@@ -72,6 +76,15 @@ public sealed class AppSettings
     public double CycleMinutes { get; set; } = 3;
     public bool Shuffle { get; set; }
     public bool FadeTransitions { get; set; } = true;
+
+    /// <summary>Listen to what the PC plays, or to a microphone.</summary>
+    public AudioSource AudioSource { get; set; } = AudioSource.Speakers;
+
+    /// <summary>The chosen microphone's device id; null = the Windows default microphone.</summary>
+    public string? MicrophoneId { get; set; }
+
+    /// <summary>Boost applied to microphone input (mics are much quieter than playback).</summary>
+    public double MicrophoneGain { get; set; } = DefaultMicrophoneGain;
 
     public double WindowWidth { get; set; } = 1100;
     public double WindowHeight { get; set; } = 650;
@@ -116,6 +129,9 @@ public sealed class AppSettings
         if (LastCycleMode == CycleMode.Off) LastCycleMode = CycleMode.Timer;
         CycleMinutes = double.IsFinite(CycleMinutes) ? Math.Clamp(CycleMinutes, MinCycleMinutes, MaxCycleMinutes) : 3;
         OverlayOpacity = double.IsFinite(OverlayOpacity) ? Math.Clamp(OverlayOpacity, MinOverlayOpacity, 1.0) : 1.0;
+        MicrophoneGain = double.IsFinite(MicrophoneGain) ? Math.Clamp(MicrophoneGain, MinMicrophoneGain, MaxMicrophoneGain) : DefaultMicrophoneGain;
+        if (!Enum.IsDefined(AudioSource)) AudioSource = AudioSource.Speakers;
+        if (string.IsNullOrWhiteSpace(MicrophoneId)) MicrophoneId = null;
         return this;
     }
 

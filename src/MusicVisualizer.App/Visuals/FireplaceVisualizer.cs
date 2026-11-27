@@ -77,6 +77,7 @@ public sealed class FireplaceVisualizer : IVisualizer
     }
 
     public string Name => "Fireplace";
+    public VisualizerCategory Category => VisualizerCategory.Scenes;
 
     // A full illustrated scene is a lot of pixels; at 75% it's visually identical and ~half the CPU.
     public float RenderScale => 0.75f;

@@ -1,18 +1,33 @@
+using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 
 namespace MusicVisualizer.Audio;
 
+/// <summary>Where the sound comes from.</summary>
+public enum AudioSource
+{
+    /// <summary>Whatever the PC is playing (WASAPI loopback of the default output device).</summary>
+    Speakers,
+
+    /// <summary>A microphone or other recording device.</summary>
+    Microphone,
+}
+
+/// <summary>A recording device the user can pick.</summary>
+public sealed record AudioDeviceInfo(string Id, string Name);
+
 /// <summary>
-/// Captures whatever the default output device is playing (WASAPI loopback), downmixes it to mono
-/// and keeps the most recent samples in a ring buffer. Follows the default device when it changes
+/// Captures either what the default output device is playing (WASAPI loopback) or a microphone, downmixes it
+/// to mono and keeps the most recent samples in a ring buffer. Follows the default device when it changes
 /// (e.g. headphones plugged in) and retries if no device is available.
 /// </summary>
-public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
+public sealed class AudioCapture : IDisposable, IMMNotificationClient
 {
     private const int RingSize = 16384;
     private const long StaleAfterMs = 200;
+    private const int AccessDenied = unchecked((int)0x80070005);
 
     private readonly object _bufferLock = new();
     private readonly object _captureLock = new();
@@ -22,10 +37,14 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
 
     private readonly MMDeviceEnumerator _enumerator = new();
     private MMDevice? _device;
-    private WasapiLoopbackCapture? _capture;
+    private WasapiCapture? _capture; // WasapiLoopbackCapture derives from WasapiCapture
     private WaveFormat? _format;
     private int _restartPending;
     private volatile bool _disposed;
+
+    private AudioSource _source = AudioSource.Speakers;
+    private string? _microphoneId; // null = the Windows default microphone
+    private volatile float _gain = 1f;
 
     public int SampleRate { get; private set; } = 48000;
 
@@ -34,6 +53,8 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
 
     public string DeviceName { get; private set; } = "";
 
+    public AudioSource Source => _source;
+
     public void Start()
     {
         try { _enumerator.RegisterEndpointNotificationCallback(this); }
@@ -41,8 +62,41 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
         StartCapture();
     }
 
+    /// <summary>
+    /// Switches source/device (restarting capture only if they changed) and sets the microphone gain.
+    /// <paramref name="microphoneId"/> null means the Windows default microphone.
+    /// </summary>
+    public void Configure(AudioSource source, string? microphoneId, float microphoneGain)
+    {
+        _gain = Math.Clamp(microphoneGain, 0.1f, 50f);
+        lock (_captureLock)
+        {
+            if (source == _source && microphoneId == _microphoneId) return;
+            _source = source;
+            _microphoneId = microphoneId;
+            Status = source == AudioSource.Microphone ? "Starting microphone…" : "Starting audio capture…";
+        }
+        StartCapture();
+    }
+
+    /// <summary>The active recording devices, for the Settings picker.</summary>
+    public IReadOnlyList<AudioDeviceInfo> ListMicrophones()
+    {
+        var result = new List<AudioDeviceInfo>();
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            foreach (var d in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+            {
+                using (d) result.Add(new AudioDeviceInfo(d.ID, d.FriendlyName));
+            }
+        }
+        catch { /* no devices / audio service unavailable */ }
+        return result;
+    }
+
     /// <summary>Copies the most recent <c>dest.Length</c> mono samples into <paramref name="dest"/>.
-    /// Returns zeros when nothing has been playing recently.</summary>
+    /// Returns zeros when nothing has been captured recently.</summary>
     public void ReadLatest(float[] dest)
     {
         lock (_bufferLock)
@@ -68,10 +122,11 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
         {
             if (_disposed) return;
             StopCaptureCore();
+            bool mic = _source == AudioSource.Microphone;
             try
             {
-                _device = _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-                _capture = new WasapiLoopbackCapture(_device);
+                _device = mic ? OpenMicrophone() : _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                _capture = mic ? new WasapiCapture(_device) : new WasapiLoopbackCapture(_device);
                 _format = _capture.WaveFormat;
                 SampleRate = _format.SampleRate;
                 DeviceName = _device.FriendlyName;
@@ -83,12 +138,37 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
             catch (Exception ex)
             {
                 StopCaptureCore();
-                Status = ex is System.Runtime.InteropServices.COMException
-                    ? "No audio output device found — retrying…"
-                    : $"Audio capture failed: {ex.Message}";
-                ScheduleRestart(2000);
+                if (mic && ex.HResult == AccessDenied)
+                {
+                    // Retrying won't help until the user changes the privacy setting; check now and then.
+                    Status = "Microphone access is blocked — allow it in Windows Settings › Privacy & security › Microphone";
+                    ScheduleRestart(5000);
+                }
+                else
+                {
+                    Status = ex is COMException
+                        ? mic ? "No microphone found — retrying…" : "No audio output device found — retrying…"
+                        : $"Audio capture failed: {ex.Message}";
+                    ScheduleRestart(2000);
+                }
             }
         }
+    }
+
+    /// <summary>The chosen microphone, or the default one if none is chosen or it's no longer available.</summary>
+    private MMDevice OpenMicrophone()
+    {
+        if (_microphoneId != null)
+        {
+            try
+            {
+                var d = _enumerator.GetDevice(_microphoneId);
+                if (d.State == DeviceState.Active) return d;
+                d.Dispose();
+            }
+            catch (Exception) { /* unplugged or removed: use the default */ }
+        }
+        return _enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
     }
 
     private void StopCaptureCore()
@@ -116,6 +196,8 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
         if (frameBytes == 0) return;
         int frames = e.BytesRecorded / frameBytes;
         var buf = e.Buffer;
+        // Microphones are much quieter than playback, so they get the user's sensitivity boost.
+        float scale = (_source == AudioSource.Microphone ? _gain : 1f) / channels;
 
         lock (_bufferLock)
         {
@@ -134,7 +216,7 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
                     };
                     offset += bytesPerSample;
                 }
-                _ring[_writePos] = sum / channels;
+                _ring[_writePos] = Math.Clamp(sum * scale, -1f, 1f);
                 _writePos = (_writePos + 1) % RingSize;
             }
             _lastDataTicks = Environment.TickCount64;
@@ -165,11 +247,19 @@ public sealed class LoopbackCapture : IDisposable, IMMNotificationClient
 
     void IMMNotificationClient.OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
     {
-        if (flow == DataFlow.Render && role == Role.Multimedia)
+        bool relevant = _source == AudioSource.Speakers
+            ? flow == DataFlow.Render && role == Role.Multimedia
+            : flow == DataFlow.Capture && role == Role.Console && _microphoneId == null;
+        if (relevant) ScheduleRestart(300);
+    }
+
+    void IMMNotificationClient.OnDeviceStateChanged(string deviceId, DeviceState newState)
+    {
+        // The chosen microphone was plugged back in.
+        if (_source == AudioSource.Microphone && deviceId == _microphoneId && newState == DeviceState.Active)
             ScheduleRestart(300);
     }
 
-    void IMMNotificationClient.OnDeviceStateChanged(string deviceId, DeviceState newState) { }
     void IMMNotificationClient.OnDeviceAdded(string pwstrDeviceId) { }
     void IMMNotificationClient.OnDeviceRemoved(string deviceId) { }
     void IMMNotificationClient.OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key) { }

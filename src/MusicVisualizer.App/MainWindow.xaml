@@ -18,7 +18,7 @@
         <Border x:Name="Toolbar" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,14,0,0"
                 Background="#B0101018" CornerRadius="10" Padding="8" Opacity="0">
             <StackPanel Orientation="Horizontal">
-                <!-- One button per visualizer, generated in code. -->
+                <!-- One dropdown button per visualizer category, generated in code. -->
                 <StackPanel x:Name="VisualizerButtons" Orientation="Horizontal" />
                 <Rectangle Width="1" Fill="#33FFFFFF" Margin="6,2" />
                 <Button Content="Colors" Style="{StaticResource ToolbarButton}" Click="OnPaletteClick" ToolTip="C" />

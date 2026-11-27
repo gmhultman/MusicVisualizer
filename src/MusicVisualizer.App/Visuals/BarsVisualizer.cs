@@ -14,6 +14,7 @@ public sealed class BarsVisualizer : IVisualizer
     private (Palette? palette, float width, float top, float bottom) _shaderKey;
 
     public string Name => "Bars";
+    public VisualizerCategory Category => VisualizerCategory.Abstract;
 
     public void Render(in RenderContext ctx)
     {

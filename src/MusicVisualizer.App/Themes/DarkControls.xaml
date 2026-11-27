@@ -147,6 +147,64 @@
         </Setter>
     </Style>
 
+    <!-- Expander: a rounded panel whose header row (chevron + text) toggles the body. -->
+    <Style TargetType="Expander">
+        <Setter Property="Foreground" Value="{StaticResource Dlg.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <Border Background="{StaticResource Dlg.Panel}" CornerRadius="6">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Top" Cursor="Hand" Focusable="True" FocusVisualStyle="{x:Null}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="10,7">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path x:Name="Chevron" Data="M 0,0 L 4,4 L 0,8" Stroke="{StaticResource Dlg.SubText}" StrokeThickness="1.6"
+                                                      Width="8" Height="8" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                                    <Path.RenderTransform>
+                                                        <RotateTransform Angle="0" />
+                                                    </Path.RenderTransform>
+                                                </Path>
+                                                <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="RenderTransform">
+                                                    <Setter.Value>
+                                                        <RotateTransform Angle="90" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                <Setter TargetName="Chevron" Property="Stroke" Value="{StaticResource Dlg.Accent}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter Content="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </ToggleButton>
+                            <ContentPresenter x:Name="Body" Margin="28,0,10,8" Visibility="Collapsed" />
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ComboBox -->
     <ControlTemplate x:Key="ComboToggle" TargetType="ToggleButton">
         <Border x:Name="Bd" Background="{StaticResource Dlg.Field}" BorderBrush="{StaticResource Dlg.Border}" BorderThickness="1" CornerRadius="4">
